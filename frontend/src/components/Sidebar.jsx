@@ -1,18 +1,30 @@
-import { useState, useEffect } from 'react';
+import { memo } from 'react';
 import './Sidebar.css';
 
-export default function Sidebar({
+function Sidebar({
   conversations,
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  isCreating,
 }) {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
         <h1>LLM Council</h1>
-        <button className="new-conversation-btn" onClick={onNewConversation}>
-          + New Conversation
+        <button
+          className={`new-conversation-btn ${isCreating ? 'creating' : ''}`}
+          onClick={onNewConversation}
+          disabled={isCreating}
+        >
+          {isCreating ? (
+            <>
+              <span className="btn-spinner"></span>
+              Creating...
+            </>
+          ) : (
+            '+ New Conversation'
+          )}
         </button>
       </div>
 
@@ -25,8 +37,8 @@ export default function Sidebar({
               key={conv.id}
               className={`conversation-item ${
                 conv.id === currentConversationId ? 'active' : ''
-              }`}
-              onClick={() => onSelectConversation(conv.id)}
+              } ${conv.id.startsWith('temp-') ? 'creating' : ''}`}
+              onClick={() => !conv.id.startsWith('temp-') && onSelectConversation(conv.id)}
             >
               <div className="conversation-title">
                 {conv.title || 'New Conversation'}
@@ -41,3 +53,6 @@ export default function Sidebar({
     </div>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default memo(Sidebar);

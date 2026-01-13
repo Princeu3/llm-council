@@ -1,14 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import './ChatInterface.css';
 
-export default function ChatInterface({
+function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  isLoadingConversation,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -19,7 +20,7 @@ export default function ChatInterface({
 
   useEffect(() => {
     scrollToBottom();
-  }, [conversation]);
+  }, [conversation?.messages]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -37,12 +38,25 @@ export default function ChatInterface({
     }
   };
 
+  // No conversation selected
   if (!conversation) {
     return (
       <div className="chat-interface">
         <div className="empty-state">
           <h2>Welcome to LLM Council</h2>
           <p>Create a new conversation to get started</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading conversation
+  if (isLoadingConversation) {
+    return (
+      <div className="chat-interface">
+        <div className="loading-conversation">
+          <div className="spinner"></div>
+          <span>Loading conversation...</span>
         </div>
       </div>
     );
@@ -110,36 +124,30 @@ export default function ChatInterface({
           ))
         )}
 
-        {isLoading && (
-          <div className="loading-indicator">
-            <div className="spinner"></div>
-            <span>Consulting the council...</span>
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
-        <form className="input-form" onSubmit={handleSubmit}>
-          <textarea
-            className="message-input"
-            placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={3}
-          />
-          <button
-            type="submit"
-            className="send-button"
-            disabled={!input.trim() || isLoading}
-          >
-            Send
-          </button>
-        </form>
-      )}
+      {/* Always show input form */}
+      <form className="input-form" onSubmit={handleSubmit}>
+        <textarea
+          className="message-input"
+          placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+          rows={3}
+        />
+        <button
+          type="submit"
+          className="send-button"
+          disabled={!input.trim() || isLoading}
+        >
+          {isLoading ? 'Thinking...' : 'Send'}
+        </button>
+      </form>
     </div>
   );
 }
+
+export default memo(ChatInterface);

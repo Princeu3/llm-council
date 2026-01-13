@@ -31,9 +31,34 @@
   font-weight: 500;
 }
 
-.new-conversation-btn:hover {
+.new-conversation-btn:hover:not(:disabled) {
   background: #357abd;
   border-color: #357abd;
+}
+
+.new-conversation-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.new-conversation-btn.creating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .conversation-list {
@@ -64,6 +89,11 @@
 .conversation-item.active {
   background: #e8f0fe;
   border: 1px solid #4a90e2;
+}
+
+.conversation-item.creating {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .conversation-title {
