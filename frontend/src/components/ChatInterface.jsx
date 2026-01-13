@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
@@ -10,6 +11,8 @@ function ChatInterface({
   onSendMessage,
   isLoading,
   isLoadingConversation,
+  error,
+  onClearError,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -64,6 +67,12 @@ function ChatInterface({
 
   return (
     <div className="chat-interface">
+      {error && (
+        <div className="error-banner">
+          <span>{error}</span>
+          <button onClick={onClearError} className="error-close">&times;</button>
+        </div>
+      )}
       <div className="messages-container">
         {conversation.messages.length === 0 ? (
           <div className="empty-state">
@@ -78,13 +87,22 @@ function ChatInterface({
                   <div className="message-label">You</div>
                   <div className="message-content">
                     <div className="markdown-content">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="assistant-message">
                   <div className="message-label">LLM Council</div>
+
+                  {/* Initial loading - before any stage starts */}
+                  {!msg.stage1 && !msg.stage2 && !msg.stage3 &&
+                   !msg.loading?.stage1 && !msg.loading?.stage2 && !msg.loading?.stage3 && (
+                    <div className="stage-loading">
+                      <div className="spinner"></div>
+                      <span>Starting council process...</span>
+                    </div>
+                  )}
 
                   {/* Stage 1 */}
                   {msg.loading?.stage1 && (

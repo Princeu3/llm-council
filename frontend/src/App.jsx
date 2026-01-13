@@ -11,6 +11,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [error, setError] = useState(null);
 
   // Load conversations on mount
   useEffect(() => {
@@ -127,6 +128,7 @@ function App() {
     if (!currentConversationId || currentConversationId.startsWith('temp-')) return;
 
     setIsLoading(true);
+    setError(null);
     try {
       // Optimistically add user message to UI
       const userMessage = { role: 'user', content };
@@ -235,6 +237,7 @@ function App() {
 
           case 'error':
             console.error('Stream error:', event.message);
+            setError(event.message || 'An error occurred');
             setIsLoading(false);
             break;
 
@@ -242,8 +245,9 @@ function App() {
             console.log('Unknown event type:', eventType);
         }
       });
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setError(err.message || 'Failed to send message');
       // Remove optimistic messages on error
       setCurrentConversation((prev) => ({
         ...prev,
@@ -269,6 +273,8 @@ function App() {
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         isLoadingConversation={isLoadingConversation}
+        error={error}
+        onClearError={() => setError(null)}
       />
     </div>
   );

@@ -1,20 +1,16 @@
 /**
  * API client for the LLM Council backend.
- * Supports both local development and Netlify deployment.
  */
 
-// Use environment variable or default to Netlify Functions path
-const API_BASE = import.meta.env.VITE_API_BASE || '/.netlify/functions';
-
-// For local development with the Python backend, use this instead:
-// const API_BASE = 'http://localhost:8001';
+// Use environment variable or default to local backend
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8001';
 
 export const api = {
   /**
    * List all conversations.
    */
   async listConversations() {
-    const response = await fetch(`${API_BASE}/conversations-list`);
+    const response = await fetch(`${API_BASE}/api/conversations`);
     if (!response.ok) {
       throw new Error('Failed to list conversations');
     }
@@ -25,7 +21,7 @@ export const api = {
    * Create a new conversation.
    */
   async createConversation() {
-    const response = await fetch(`${API_BASE}/conversations-create`, {
+    const response = await fetch(`${API_BASE}/api/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,9 +38,7 @@ export const api = {
    * Get a specific conversation.
    */
   async getConversation(conversationId) {
-    const response = await fetch(
-      `${API_BASE}/conversations-get?id=${conversationId}`
-    );
+    const response = await fetch(`${API_BASE}/api/conversations/${conversationId}`);
     if (!response.ok) {
       throw new Error('Failed to get conversation');
     }
@@ -55,12 +49,12 @@ export const api = {
    * Rename a conversation.
    */
   async renameConversation(conversationId, title) {
-    const response = await fetch(`${API_BASE}/conversations-update`, {
+    const response = await fetch(`${API_BASE}/api/conversations/${conversationId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ id: conversationId, title }),
+      body: JSON.stringify({ title }),
     });
     if (!response.ok) {
       throw new Error('Failed to rename conversation');
@@ -72,10 +66,9 @@ export const api = {
    * Delete a conversation.
    */
   async deleteConversation(conversationId) {
-    const response = await fetch(
-      `${API_BASE}/conversations-delete?id=${conversationId}`,
-      { method: 'DELETE' }
-    );
+    const response = await fetch(`${API_BASE}/api/conversations/${conversationId}`, {
+      method: 'DELETE',
+    });
     if (!response.ok) {
       throw new Error('Failed to delete conversation');
     }
@@ -83,116 +76,52 @@ export const api = {
   },
 
   /**
-   * Send a message and poll for results.
+   * Send a message with SSE streaming.
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content
-   * @param {function} onStatusUpdate - Callback: (status, data) => void
-   * @returns {Promise<object>} Final result with stage1, stage2, stage3, metadata
-   */
-  async sendMessage(conversationId, content, onStatusUpdate) {
-    // Start the council process
-    const startResponse = await fetch(`${API_BASE}/council-start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ conversationId, content }),
-    });
-
-    if (!startResponse.ok) {
-      const errorData = await startResponse.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to start council process');
-    }
-
-    const { jobId } = await startResponse.json();
-
-    // Poll for results
-    return this.pollJobStatus(jobId, onStatusUpdate);
-  },
-
-  /**
-   * Poll job status until complete or error.
-   * @param {string} jobId - The job ID to poll
-   * @param {function} onStatusUpdate - Callback for status updates
-   * @param {number} interval - Polling interval in ms (default 2000)
-   * @returns {Promise<object>} Final result
-   */
-  async pollJobStatus(jobId, onStatusUpdate, interval = 2000) {
-    let lastStatus = null;
-
-    while (true) {
-      const response = await fetch(`${API_BASE}/council-status?jobId=${jobId}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to get job status');
-      }
-
-      const job = await response.json();
-
-      // Notify on status change
-      if (job.status !== lastStatus) {
-        lastStatus = job.status;
-        onStatusUpdate?.(job.status, job);
-      }
-
-      // Check terminal states
-      if (job.status === 'complete') {
-        return {
-          stage1: job.stage1,
-          stage2: job.stage2,
-          stage3: job.stage3,
-          metadata: job.metadata,
-        };
-      }
-
-      if (job.status === 'error') {
-        throw new Error(job.error || 'Council process failed');
-      }
-
-      // Wait before next poll
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    }
-  },
-
-  /**
-   * Legacy streaming method - kept for backward compatibility.
-   * Now internally uses polling.
+   * @param {function} onEvent - Callback: (eventType, eventData) => void
    */
   async sendMessageStream(conversationId, content, onEvent) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/message/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to send message');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
     try {
-      await this.sendMessage(conversationId, content, (status, job) => {
-        switch (status) {
-          case 'pending':
-            // Initial state, no event needed
-            break;
-          case 'stage1_running':
-            onEvent('stage1_start', {});
-            break;
-          case 'stage1_complete':
-            onEvent('stage1_complete', { data: job.stage1 });
-            break;
-          case 'stage2_running':
-            onEvent('stage2_start', {});
-            break;
-          case 'stage2_complete':
-            onEvent('stage2_complete', { data: job.stage2, metadata: job.metadata });
-            break;
-          case 'stage3_running':
-            onEvent('stage3_start', {});
-            break;
-          case 'complete':
-            // Backend goes directly to 'complete' after stage3
-            // Fire stage3_complete with data, then complete
-            onEvent('stage3_complete', { data: job.stage3 });
-            onEvent('complete', {});
-            break;
-          case 'error':
-            onEvent('error', { message: job.error });
-            break;
-          default:
-            console.log('Unknown status:', status);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              onEvent(data.type, data);
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+          }
         }
-      });
+      }
     } catch (error) {
       onEvent('error', { message: error.message });
     }

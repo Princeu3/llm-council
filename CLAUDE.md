@@ -35,22 +35,30 @@ LLM Council is a 3-stage deliberation system where multiple LLMs collaboratively
 - `calculate_aggregate_rankings()`: Computes average rank position across all peer evaluations
 
 **`storage.py`**
-- JSON-based conversation storage in `data/conversations/`
-- Each conversation: `{id, created_at, messages[]}`
+- MongoDB-based conversation storage using motor (async driver)
+- Uses `MONGODB_URI` environment variable for connection
+- Each conversation: `{id, created_at, title, messages[]}`
 - Assistant messages contain: `{role, stage1, stage2, stage3}`
 - Note: metadata (label_to_model, aggregate_rankings) is NOT persisted to storage, only returned via API
 
 **`main.py`**
-- FastAPI app with CORS enabled for localhost:5173 and localhost:3000
-- POST `/api/conversations/{id}/message` returns metadata in addition to stages
+- FastAPI app with CORS enabled for all origins
+- POST `/api/conversations/{id}/message/stream` - SSE streaming endpoint (preferred)
+- POST `/api/conversations/{id}/message` - Non-streaming endpoint
+- DELETE `/api/conversations/{id}` - Delete conversation
+- PATCH `/api/conversations/{id}` - Rename conversation
 - Metadata includes: label_to_model mapping and aggregate_rankings
 
 ### Frontend Structure (`frontend/src/`)
 
 **`App.jsx`**
 - Main orchestration: manages conversations list and current conversation
+- Uses SSE streaming for real-time stage updates
 - Handles message sending and metadata storage
-- Important: metadata is stored in the UI state for display but not persisted to backend JSON
+
+**`api.js`**
+- API client with SSE streaming support via `sendMessageStream()`
+- Uses `VITE_API_BASE` env var or defaults to `http://localhost:8001`
 
 **`components/ChatInterface.jsx`**
 - Multiline textarea (3 rows, resizable)
@@ -119,6 +127,17 @@ All backend modules use relative imports (e.g., `from .config import ...`) not a
 - Frontend: 5173 (Vite default)
 - Update both `backend/main.py` and `frontend/src/api.js` if changing
 
+### Local Development Scripts
+Located in `scripts/` folder:
+- `setup.sh` - Initial setup (install deps, check env vars)
+- `start.sh` - Start both backend and frontend
+- `stop.sh` - Stop running servers
+
+### Environment Variables
+Required in `.env`:
+- `OPENROUTER_API_KEY` - API key for OpenRouter
+- `MONGODB_URI` - MongoDB Atlas connection string
+
 ### Markdown Rendering
 All ReactMarkdown components must be wrapped in `<div className="markdown-content">` for proper spacing. This class is defined globally in `index.css`.
 
@@ -127,15 +146,33 @@ Models are hardcoded in `backend/config.py`. Chairman can be same or different f
 
 ## Common Gotchas
 
-1. **Module Import Errors**: Always run backend as `python -m backend.main` from project root, not from backend directory
-2. **CORS Issues**: Frontend must match allowed origins in `main.py` CORS middleware
+1. **Module Import Errors**: Always run backend from project root, not from backend directory
+2. **CORS Issues**: Currently allows all origins (`*`), restrict in production if needed
 3. **Ranking Parse Failures**: If models don't follow format, fallback regex extracts any "Response X" patterns in order
 4. **Missing Metadata**: Metadata is ephemeral (not persisted), only available in API responses
+5. **MongoDB Connection**: Ensure `MONGODB_URI` is set in `.env` before starting backend
+
+## Deployment
+
+### Local Development
+```bash
+./scripts/setup.sh  # First time setup
+./scripts/start.sh  # Start servers
+./scripts/stop.sh   # Stop servers
+```
+
+### Railway (Production)
+- Dockerfile in project root for backend deployment
+- Uses uv for Python dependency management
+- Environment variables set in Railway dashboard:
+  - `OPENROUTER_API_KEY`
+  - `MONGODB_URI`
+  - `COUNCIL_MODELS` (optional, defaults in config.py)
+  - `CHAIRMAN_MODEL` (optional, defaults in config.py)
 
 ## Future Enhancement Ideas
 
 - Configurable council/chairman via UI instead of config file
-- Streaming responses instead of batch loading
 - Export conversations to markdown/PDF
 - Model performance analytics over time
 - Custom ranking criteria (not just accuracy/insight)
