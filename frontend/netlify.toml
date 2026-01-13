@@ -1,0 +1,46 @@
+[build]
+  # Build command for the frontend
+  command = "npm run build"
+
+  # Publish directory (Vite default)
+  publish = "dist"
+
+  # Functions directory
+  functions = "netlify/functions"
+
+[functions]
+  # Use esbuild for faster builds
+  node_bundler = "esbuild"
+
+  # External modules that shouldn't be bundled
+  external_node_modules = ["mongodb"]
+
+# Background function configuration
+[functions."council-process-background"]
+  # Background function - extended timeout (15 minutes)
+  type = "background"
+
+# Development settings
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+  autoLaunch = false
+
+# Environment variable context
+[context.production.environment]
+  NODE_VERSION = "20"
+
+# Headers for CORS and security
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+
+# SPA fallback - must be last
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
