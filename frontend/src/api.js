@@ -128,26 +128,40 @@ export const api = {
    * Now internally uses polling.
    */
   async sendMessageStream(conversationId, content, onEvent) {
-    // Map polling status to SSE-style events for backward compatibility
-    const statusToEvents = {
-      pending: () => {},
-      stage1_running: () => onEvent('stage1_start', {}),
-      stage1_complete: (job) => onEvent('stage1_complete', { data: job.stage1 }),
-      stage2_running: () => onEvent('stage2_start', {}),
-      stage2_complete: (job) =>
-        onEvent('stage2_complete', { data: job.stage2, metadata: job.metadata }),
-      stage3_running: () => onEvent('stage3_start', {}),
-      stage3_complete: (job) => onEvent('stage3_complete', { data: job.stage3 }),
-      complete: () => onEvent('complete', {}),
-      error: (job) => onEvent('error', { message: job.error }),
-    };
-
     try {
       await this.sendMessage(conversationId, content, (status, job) => {
-        const handler = statusToEvents[status];
-        if (handler) handler(job);
+        switch (status) {
+          case 'pending':
+            // Initial state, no event needed
+            break;
+          case 'stage1_running':
+            onEvent('stage1_start', {});
+            break;
+          case 'stage1_complete':
+            onEvent('stage1_complete', { data: job.stage1 });
+            break;
+          case 'stage2_running':
+            onEvent('stage2_start', {});
+            break;
+          case 'stage2_complete':
+            onEvent('stage2_complete', { data: job.stage2, metadata: job.metadata });
+            break;
+          case 'stage3_running':
+            onEvent('stage3_start', {});
+            break;
+          case 'complete':
+            // Backend goes directly to 'complete' after stage3
+            // Fire stage3_complete with data, then complete
+            onEvent('stage3_complete', { data: job.stage3 });
+            onEvent('complete', {});
+            break;
+          case 'error':
+            onEvent('error', { message: job.error });
+            break;
+          default:
+            console.log('Unknown status:', status);
+        }
       });
-      onEvent('complete', {});
     } catch (error) {
       onEvent('error', { message: error.message });
     }
