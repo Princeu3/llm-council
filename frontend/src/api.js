@@ -52,6 +52,23 @@ export const api = {
   },
 
   /**
+   * Rename a conversation.
+   */
+  async renameConversation(conversationId, title) {
+    const response = await fetch(`${API_BASE}/conversations-update`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: conversationId, title }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to rename conversation');
+    }
+    return response.json();
+  },
+
+  /**
    * Send a message and poll for results.
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content

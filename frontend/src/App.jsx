@@ -92,6 +92,22 @@ function App() {
     setCurrentConversation(null);
   }, [currentConversationId]);
 
+  const handleRenameConversation = useCallback(async (id, newTitle) => {
+    try {
+      await api.renameConversation(id, newTitle);
+      // Update local state
+      setConversations(prev =>
+        prev.map(c => c.id === id ? { ...c, title: newTitle } : c)
+      );
+      // Also update current conversation if it's the one being renamed
+      if (currentConversation?.id === id) {
+        setCurrentConversation(prev => ({ ...prev, title: newTitle }));
+      }
+    } catch (error) {
+      console.error('Failed to rename conversation:', error);
+    }
+  }, [currentConversation?.id]);
+
   const handleSendMessage = useCallback(async (content) => {
     if (!currentConversationId || currentConversationId.startsWith('temp-')) return;
 
@@ -229,6 +245,7 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onRenameConversation={handleRenameConversation}
         isCreating={isCreatingConversation}
       />
       <ChatInterface

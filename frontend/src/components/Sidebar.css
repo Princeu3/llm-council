@@ -105,4 +105,78 @@
 .conversation-meta {
   color: #999;
   font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rename-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.conversation-item:hover .rename-btn {
+  opacity: 1;
+}
+
+.rename-btn:hover {
+  color: #4a90e2;
+}
+
+.conversation-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #4a90e2;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.edit-input:focus {
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.edit-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.edit-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.edit-btn.save {
+  background: #4a90e2;
+  color: white;
+}
+
+.edit-btn.save:hover {
+  background: #357abd;
+}
+
+.edit-btn.cancel {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.edit-btn.cancel:hover {
+  background: #d0d0d0;
 }
