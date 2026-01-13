@@ -53,8 +53,8 @@ if [ ! -f .env ]; then
 # OpenRouter API Key (required)
 OPENROUTER_API_KEY=your-openrouter-api-key-here
 
-# MongoDB URI (required)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/llm_council?retryWrites=true&w=majority
+# MongoDB URI (required) - replace with your MongoDB Atlas connection string
+MONGODB_URI=your-mongodb-uri-here
 EOF
     echo "Please edit .env and add your API keys."
 else
@@ -70,7 +70,7 @@ else
         echo "  Warning: MONGODB_URI not found in .env"
         echo ""
         echo "  Add to your .env file:"
-        echo "  MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/llm_council"
+        echo "  MONGODB_URI=your-mongodb-atlas-connection-string"
     else
         echo "  MONGODB_URI: configured"
     fi
