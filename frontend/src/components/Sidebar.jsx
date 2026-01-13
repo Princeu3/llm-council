@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import './Sidebar.css';
 
 function Sidebar({
@@ -7,13 +7,33 @@ function Sidebar({
   onSelectConversation,
   onNewConversation,
   onRenameConversation,
+  onDeleteConversation,
   isCreating,
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [menuOpenId, setMenuOpenId] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMenuToggle = (e, convId) => {
+    e.stopPropagation();
+    setMenuOpenId(menuOpenId === convId ? null : convId);
+  };
 
   const handleStartEdit = (e, conv) => {
     e.stopPropagation();
+    setMenuOpenId(null);
     setEditingId(conv.id);
     setEditTitle(conv.title || 'New Conversation');
   };
@@ -31,6 +51,14 @@ function Sidebar({
     e.stopPropagation();
     setEditingId(null);
     setEditTitle('');
+  };
+
+  const handleDelete = (e, convId) => {
+    e.stopPropagation();
+    setMenuOpenId(null);
+    if (confirm('Delete this conversation?')) {
+      onDeleteConversation(convId);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -100,13 +128,25 @@ function Sidebar({
                   <div className="conversation-meta">
                     <span>{conv.message_count} messages</span>
                     {!conv.id.startsWith('temp-') && (
-                      <button
-                        className="rename-btn"
-                        onClick={(e) => handleStartEdit(e, conv)}
-                        title="Rename"
-                      >
-                        ✎
-                      </button>
+                      <div className="menu-container" ref={menuOpenId === conv.id ? menuRef : null}>
+                        <button
+                          className="menu-btn"
+                          onClick={(e) => handleMenuToggle(e, conv.id)}
+                          title="Options"
+                        >
+                          ⋮
+                        </button>
+                        {menuOpenId === conv.id && (
+                          <div className="dropdown-menu">
+                            <button onClick={(e) => handleStartEdit(e, conv)}>
+                              ✎ Rename
+                            </button>
+                            <button onClick={(e) => handleDelete(e, conv.id)} className="delete">
+                              🗑 Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </>

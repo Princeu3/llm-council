@@ -39,8 +39,9 @@
     Access-Control-Allow-Headers = "Content-Type"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
 
-# SPA fallback - must be last
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# SPA fallback - only for production builds
+# Commented out for local dev compatibility
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
