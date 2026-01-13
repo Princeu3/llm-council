@@ -25,17 +25,19 @@ FROM nginx:alpine
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config for SPA routing
+# Create nginx config template with PORT variable
 RUN echo 'server { \
-    listen 80; \
+    listen ${PORT}; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \
-}' > /etc/nginx/conf.d/default.conf
+}' > /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Railway provides PORT env var (default to 80 for local)
+ENV PORT=80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Use envsubst to substitute PORT at runtime
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
