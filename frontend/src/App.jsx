@@ -1,8 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { api } from './api';
 import './App.css';
+
+/**
+ * Immutably update the last message in a conversation's messages array.
+ * Used by SSE event handlers to progressively build the assistant response.
+ */
+function updateLastMessage(prev, updater) {
+  const messages = [...prev.messages];
+  messages[messages.length - 1] = updater({ ...messages[messages.length - 1] });
+  return { ...prev, messages };
+}
 
 function App() {
   const [conversations, setConversations] = useState([]);
@@ -13,14 +23,13 @@ function App() {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load conversations on mount
   useEffect(() => {
     loadConversations();
   }, []);
 
-  // Load conversation details when selected
+  // Load conversation details when selected (skip temp IDs -- they haven't been created yet)
   useEffect(() => {
-    if (currentConversationId) {
+    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
       loadConversation(currentConversationId);
     }
   }, [currentConversationId]);
@@ -29,8 +38,8 @@ function App() {
     try {
       const convs = await api.listConversations();
       setConversations(convs);
-    } catch (error) {
-      console.error('Failed to load conversations:', error);
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
     }
   }, []);
 
@@ -39,20 +48,18 @@ function App() {
     try {
       const conv = await api.getConversation(id);
       setCurrentConversation(conv);
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
     } finally {
       setIsLoadingConversation(false);
     }
   }, []);
 
   const handleNewConversation = useCallback(async () => {
-    // Prevent double-clicks
     if (isCreatingConversation) return;
 
     setIsCreatingConversation(true);
 
-    // Optimistic: immediately show a placeholder conversation
     const tempId = 'temp-' + Date.now();
     const tempConv = {
       id: tempId,
@@ -67,15 +74,13 @@ function App() {
 
     try {
       const newConv = await api.createConversation();
-      // Replace temp with real conversation
       setConversations(prev =>
         prev.map(c => c.id === tempId ? { ...newConv, message_count: 0 } : c)
       );
       setCurrentConversationId(newConv.id);
       setCurrentConversation(newConv);
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
-      // Rollback optimistic update
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
       setConversations(prev => prev.filter(c => c.id !== tempId));
       setCurrentConversationId(null);
       setCurrentConversation(null);
@@ -85,42 +90,35 @@ function App() {
   }, [isCreatingConversation]);
 
   const handleSelectConversation = useCallback((id) => {
-    // Immediate visual feedback - set the ID right away
     if (id === currentConversationId) return;
-
     setCurrentConversationId(id);
-    // Clear current conversation to show loading state
     setCurrentConversation(null);
   }, [currentConversationId]);
 
   const handleRenameConversation = useCallback(async (id, newTitle) => {
     try {
       await api.renameConversation(id, newTitle);
-      // Update local state
       setConversations(prev =>
         prev.map(c => c.id === id ? { ...c, title: newTitle } : c)
       );
-      // Also update current conversation if it's the one being renamed
       if (currentConversation?.id === id) {
         setCurrentConversation(prev => ({ ...prev, title: newTitle }));
       }
-    } catch (error) {
-      console.error('Failed to rename conversation:', error);
+    } catch (err) {
+      console.error('Failed to rename conversation:', err);
     }
   }, [currentConversation?.id]);
 
   const handleDeleteConversation = useCallback(async (id) => {
     try {
       await api.deleteConversation(id);
-      // Remove from local state
       setConversations(prev => prev.filter(c => c.id !== id));
-      // Clear current conversation if it was deleted
       if (currentConversationId === id) {
         setCurrentConversationId(null);
         setCurrentConversation(null);
       }
-    } catch (error) {
-      console.error('Failed to delete conversation:', error);
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
     }
   }, [currentConversationId]);
 
@@ -130,107 +128,68 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      // Optimistically add user message to UI
-      const userMessage = { role: 'user', content };
       setCurrentConversation((prev) => ({
         ...prev,
-        messages: [...prev.messages, userMessage],
+        messages: [
+          ...prev.messages,
+          { role: 'user', content },
+          {
+            role: 'assistant',
+            stage1: null,
+            stage2: null,
+            stage3: null,
+            metadata: null,
+            loading: { stage1: false, stage2: false, stage3: false },
+          },
+        ],
       }));
 
-      // Create a partial assistant message that will be updated progressively
-      const assistantMessage = {
-        role: 'assistant',
-        stage1: null,
-        stage2: null,
-        stage3: null,
-        metadata: null,
-        loading: {
-          stage1: false,
-          stage2: false,
-          stage3: false,
-        },
-      };
-
-      // Add the partial assistant message
-      setCurrentConversation((prev) => ({
-        ...prev,
-        messages: [...prev.messages, assistantMessage],
-      }));
-
-      // Send message with streaming
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.loading = { ...lastMsg.loading, stage1: true };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg, loading: { ...msg.loading, stage1: true },
+            })));
             break;
 
           case 'stage1_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.stage1 = event.data;
-              lastMsg.loading = { ...lastMsg.loading, stage1: false };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg, stage1: event.data, loading: { ...msg.loading, stage1: false },
+            })));
             break;
 
           case 'stage2_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.loading = { ...lastMsg.loading, stage2: true };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg, loading: { ...msg.loading, stage2: true },
+            })));
             break;
 
           case 'stage2_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.stage2 = event.data;
-              lastMsg.metadata = event.metadata;
-              lastMsg.loading = { ...lastMsg.loading, stage2: false };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg,
+              stage2: event.data,
+              metadata: event.metadata,
+              loading: { ...msg.loading, stage2: false },
+            })));
             break;
 
           case 'stage3_start':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.loading = { ...lastMsg.loading, stage3: true };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg, loading: { ...msg.loading, stage3: true },
+            })));
             break;
 
           case 'stage3_complete':
-            setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = { ...messages[messages.length - 1] };
-              lastMsg.stage3 = event.data;
-              lastMsg.loading = { ...lastMsg.loading, stage3: false };
-              messages[messages.length - 1] = lastMsg;
-              return { ...prev, messages };
-            });
+            setCurrentConversation((prev) => updateLastMessage(prev, (msg) => ({
+              ...msg, stage3: event.data, loading: { ...msg.loading, stage3: false },
+            })));
             break;
 
           case 'title_complete':
-            // Reload conversations to get updated title
             loadConversations();
             break;
 
           case 'complete':
-            // Stream complete, reload conversations list
             loadConversations();
             setIsLoading(false);
             break;
@@ -248,7 +207,6 @@ function App() {
     } catch (err) {
       console.error('Failed to send message:', err);
       setError(err.message || 'Failed to send message');
-      // Remove optimistic messages on error
       setCurrentConversation((prev) => ({
         ...prev,
         messages: prev.messages.slice(0, -2),

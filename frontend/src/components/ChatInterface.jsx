@@ -6,6 +6,20 @@ import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import './ChatInterface.css';
 
+function StageLoading({ message }) {
+  return (
+    <div className="stage-loading">
+      <div className="spinner"></div>
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function hasAnyStageActivity(msg) {
+  return msg.stage1 || msg.stage2 || msg.stage3
+    || msg.loading?.stage1 || msg.loading?.stage2 || msg.loading?.stage3;
+}
+
 function ChatInterface({
   conversation,
   onSendMessage,
@@ -17,12 +31,8 @@ function ChatInterface({
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation?.messages]);
 
   const handleSubmit = (e) => {
@@ -34,14 +44,12 @@ function ChatInterface({
   };
 
   const handleKeyDown = (e) => {
-    // Submit on Enter (without Shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
   };
 
-  // No conversation selected
   if (!conversation) {
     return (
       <div className="chat-interface">
@@ -53,7 +61,6 @@ function ChatInterface({
     );
   }
 
-  // Loading conversation
   if (isLoadingConversation) {
     return (
       <div className="chat-interface">
@@ -95,30 +102,17 @@ function ChatInterface({
                 <div className="assistant-message">
                   <div className="message-label">LLM Council</div>
 
-                  {/* Initial loading - before any stage starts */}
-                  {!msg.stage1 && !msg.stage2 && !msg.stage3 &&
-                   !msg.loading?.stage1 && !msg.loading?.stage2 && !msg.loading?.stage3 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Starting council process...</span>
-                    </div>
+                  {!hasAnyStageActivity(msg) && (
+                    <StageLoading message="Starting council process..." />
                   )}
 
-                  {/* Stage 1 */}
                   {msg.loading?.stage1 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
-                    </div>
+                    <StageLoading message="Running Stage 1: Collecting individual responses..." />
                   )}
                   {msg.stage1 && <Stage1 responses={msg.stage1} />}
 
-                  {/* Stage 2 */}
                   {msg.loading?.stage2 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
-                    </div>
+                    <StageLoading message="Running Stage 2: Peer rankings..." />
                   )}
                   {msg.stage2 && (
                     <Stage2
@@ -128,12 +122,8 @@ function ChatInterface({
                     />
                   )}
 
-                  {/* Stage 3 */}
                   {msg.loading?.stage3 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 3: Final synthesis...</span>
-                    </div>
+                    <StageLoading message="Running Stage 3: Final synthesis..." />
                   )}
                   {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
                 </div>
@@ -145,7 +135,6 @@ function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Only show input form for new conversations (no messages yet) */}
       {conversation.messages.length === 0 && (
         <form className="input-form" onSubmit={handleSubmit}>
           <textarea

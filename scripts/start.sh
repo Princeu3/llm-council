@@ -12,8 +12,8 @@ if [ -f .env ]; then
 fi
 
 # Check required env vars
-if [ -z "$MONGODB_URI" ]; then
-    echo "Error: MONGODB_URI not set. Run ./scripts/setup.sh first."
+if [ -z "$DATABASE_URL" ]; then
+    echo "Error: DATABASE_URL not set. Run ./scripts/setup.sh first."
     exit 1
 fi
 
@@ -24,6 +24,11 @@ fi
 
 echo "Starting LLM Council..."
 echo ""
+
+# Start PostgreSQL via Docker Compose
+echo "Starting PostgreSQL..."
+docker compose up -d
+sleep 2
 
 # Start backend with uvicorn (hot reload enabled)
 echo "Starting backend on http://localhost:8001..."

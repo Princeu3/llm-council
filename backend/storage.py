@@ -1,189 +1,179 @@
-"""MongoDB-based storage for conversations."""
+"""PostgreSQL-based storage for conversations."""
 
-from datetime import datetime
-from typing import List, Dict, Any, Optional
-from motor.motor_asyncio import AsyncIOMotorClient
-from .config import MONGODB_URI
+import json
+from typing import Any, Dict, List, Optional
 
-# MongoDB client singleton
-_client: Optional[AsyncIOMotorClient] = None
-_db = None
+import asyncpg
 
+from .config import DATABASE_URL
 
-async def get_db():
-    """Get MongoDB database connection (singleton)."""
-    global _client, _db
-    if _db is None:
-        if not MONGODB_URI:
-            raise ValueError("MONGODB_URI environment variable not set")
-        _client = AsyncIOMotorClient(MONGODB_URI)
-        _db = _client.llm_council
-    return _db
+_pool: Optional[asyncpg.Pool] = None
 
 
-async def get_conversations_collection():
-    """Get the conversations collection."""
-    db = await get_db()
-    return db.conversations
+async def _init_connection(conn):
+    """Register JSONB codec on each new connection."""
+    await conn.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+
+
+async def create_pool():
+    """Create the asyncpg connection pool."""
+    global _pool
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL environment variable not set")
+    _pool = await asyncpg.create_pool(DATABASE_URL, init=_init_connection)
+
+
+async def close_pool():
+    """Close the connection pool."""
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+
+
+async def create_tables():
+    """Create tables if they don't exist (idempotent)."""
+    async with _pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS conversations (
+                id TEXT PRIMARY KEY,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                title TEXT NOT NULL DEFAULT 'New Conversation',
+                messages JSONB NOT NULL DEFAULT '[]'::jsonb
+            )
+        """)
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_conversations_created_at
+            ON conversations (created_at DESC)
+        """)
 
 
 async def create_conversation(conversation_id: str) -> Dict[str, Any]:
-    """
-    Create a new conversation.
-
-    Args:
-        conversation_id: Unique identifier for the conversation
-
-    Returns:
-        New conversation dict
-    """
-    conversation = {
-        "id": conversation_id,
-        "created_at": datetime.utcnow().isoformat(),
-        "title": "New Conversation",
-        "messages": []
-    }
-
-    collection = await get_conversations_collection()
-    await collection.insert_one(conversation)
-
-    # Remove MongoDB's _id for the response
-    conversation.pop("_id", None)
-    return conversation
+    """Create a new conversation."""
+    async with _pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO conversations (id) VALUES ($1)
+            RETURNING id, created_at, title, messages
+            """,
+            conversation_id,
+        )
+    return _row_to_dict(row)
 
 
 async def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Load a conversation from storage.
-
-    Args:
-        conversation_id: Unique identifier for the conversation
-
-    Returns:
-        Conversation dict or None if not found
-    """
-    collection = await get_conversations_collection()
-    conversation = await collection.find_one({"id": conversation_id})
-
-    if conversation:
-        conversation.pop("_id", None)
-
-    return conversation
+    """Load a conversation from storage."""
+    async with _pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, created_at, title, messages FROM conversations WHERE id = $1",
+            conversation_id,
+        )
+    return _row_to_dict(row) if row else None
 
 
 async def save_conversation(conversation: Dict[str, Any]):
-    """
-    Save a conversation to storage.
-
-    Args:
-        conversation: Conversation dict to save
-    """
-    collection = await get_conversations_collection()
-    await collection.replace_one(
-        {"id": conversation["id"]},
-        conversation,
-        upsert=True
-    )
+    """Save (upsert) a full conversation."""
+    async with _pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO conversations (id, created_at, title, messages)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE
+            SET title = EXCLUDED.title, messages = EXCLUDED.messages
+            """,
+            conversation["id"],
+            conversation["created_at"],
+            conversation.get("title", "New Conversation"),
+            conversation.get("messages", []),
+        )
 
 
 async def list_conversations() -> List[Dict[str, Any]]:
-    """
-    List all conversations (metadata only).
+    """List all conversations (metadata only)."""
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, created_at, title, jsonb_array_length(messages) AS message_count
+            FROM conversations
+            ORDER BY created_at DESC
+            """
+        )
+    return [
+        {
+            "id": row["id"],
+            "created_at": row["created_at"].isoformat(),
+            "title": row["title"],
+            "message_count": row["message_count"],
+        }
+        for row in rows
+    ]
 
-    Returns:
-        List of conversation metadata dicts
-    """
-    collection = await get_conversations_collection()
-    cursor = collection.find({}).sort("created_at", -1)
 
-    conversations = []
-    async for doc in cursor:
-        conversations.append({
-            "id": doc["id"],
-            "created_at": doc["created_at"],
-            "title": doc.get("title", "New Conversation"),
-            "message_count": len(doc.get("messages", []))
-        })
-
-    return conversations
+async def _append_message(conversation_id: str, message: Dict[str, Any]):
+    """Atomically append a message to a conversation's messages array."""
+    async with _pool.acquire() as conn:
+        result = await conn.execute(
+            """
+            UPDATE conversations
+            SET messages = messages || jsonb_build_array($2::jsonb)
+            WHERE id = $1
+            """,
+            conversation_id,
+            message,
+        )
+    if result == "UPDATE 0":
+        raise ValueError(f"Conversation {conversation_id} not found")
 
 
 async def add_user_message(conversation_id: str, content: str):
-    """
-    Add a user message to a conversation.
-
-    Args:
-        conversation_id: Conversation identifier
-        content: User message content
-    """
-    collection = await get_conversations_collection()
-    result = await collection.update_one(
-        {"id": conversation_id},
-        {"$push": {"messages": {"role": "user", "content": content}}}
-    )
-
-    if result.matched_count == 0:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    """Atomically append a user message to a conversation."""
+    await _append_message(conversation_id, {"role": "user", "content": content})
 
 
 async def add_assistant_message(
     conversation_id: str,
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
-    stage3: Dict[str, Any]
+    stage3: Dict[str, Any],
 ):
-    """
-    Add an assistant message with all 3 stages to a conversation.
-
-    Args:
-        conversation_id: Conversation identifier
-        stage1: List of individual model responses
-        stage2: List of model rankings
-        stage3: Final synthesized response
-    """
-    collection = await get_conversations_collection()
-    result = await collection.update_one(
-        {"id": conversation_id},
-        {"$push": {"messages": {
-            "role": "assistant",
-            "stage1": stage1,
-            "stage2": stage2,
-            "stage3": stage3
-        }}}
-    )
-
-    if result.matched_count == 0:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    """Atomically append an assistant message with all 3 stages."""
+    await _append_message(conversation_id, {
+        "role": "assistant", "stage1": stage1, "stage2": stage2, "stage3": stage3,
+    })
 
 
 async def update_conversation_title(conversation_id: str, title: str):
-    """
-    Update the title of a conversation.
-
-    Args:
-        conversation_id: Conversation identifier
-        title: New title for the conversation
-    """
-    collection = await get_conversations_collection()
-    result = await collection.update_one(
-        {"id": conversation_id},
-        {"$set": {"title": title}}
-    )
-
-    if result.matched_count == 0:
+    """Update the title of a conversation."""
+    async with _pool.acquire() as conn:
+        result = await conn.execute(
+            "UPDATE conversations SET title = $2 WHERE id = $1",
+            conversation_id,
+            title,
+        )
+    if result == "UPDATE 0":
         raise ValueError(f"Conversation {conversation_id} not found")
 
 
 async def delete_conversation(conversation_id: str) -> bool:
-    """
-    Delete a conversation.
+    """Delete a conversation. Returns True if deleted, False if not found."""
+    async with _pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM conversations WHERE id = $1",
+            conversation_id,
+        )
+    return result == "DELETE 1"
 
-    Args:
-        conversation_id: Conversation identifier
 
-    Returns:
-        True if deleted, False if not found
-    """
-    collection = await get_conversations_collection()
-    result = await collection.delete_one({"id": conversation_id})
-    return result.deleted_count > 0
+def _row_to_dict(row: asyncpg.Record) -> Dict[str, Any]:
+    """Convert an asyncpg Record to the conversation dict format."""
+    return {
+        "id": row["id"],
+        "created_at": row["created_at"].isoformat(),
+        "title": row["title"],
+        "messages": row["messages"],
+    }

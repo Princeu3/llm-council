@@ -33,4 +33,8 @@ lsof -ti:5173 | xargs kill 2>/dev/null
 # Clean up PID files
 rm -f /tmp/llm-council-*.pid
 
+# Stop PostgreSQL
+cd "$(dirname "$0")/.."
+docker compose down 2>/dev/null && echo "  Stopped PostgreSQL"
+
 echo "Done."

@@ -35,14 +35,18 @@ LLM Council is a 3-stage deliberation system where multiple LLMs collaboratively
 - `calculate_aggregate_rankings()`: Computes average rank position across all peer evaluations
 
 **`storage.py`**
-- MongoDB-based conversation storage using motor (async driver)
-- Uses `MONGODB_URI` environment variable for connection
+- PostgreSQL-based conversation storage using asyncpg (async driver)
+- Uses `DATABASE_URL` environment variable for connection
+- Connection pool created at startup via FastAPI lifespan, closed at shutdown
+- Single `conversations` table with JSONB `messages` column
 - Each conversation: `{id, created_at, title, messages[]}`
 - Assistant messages contain: `{role, stage1, stage2, stage3}`
+- Atomic message appends via `messages || jsonb_build_array()`
 - Note: metadata (label_to_model, aggregate_rankings) is NOT persisted to storage, only returned via API
 
 **`main.py`**
 - FastAPI app with CORS enabled for all origins
+- Uses `lifespan` context manager for PostgreSQL pool init/shutdown + table creation
 - POST `/api/conversations/{id}/message/stream` - SSE streaming endpoint (preferred)
 - POST `/api/conversations/{id}/message` - Non-streaming endpoint
 - DELETE `/api/conversations/{id}` - Delete conversation
@@ -136,7 +140,7 @@ Located in `scripts/` folder:
 ### Environment Variables
 Required in `.env`:
 - `OPENROUTER_API_KEY` - API key for OpenRouter
-- `MONGODB_URI` - MongoDB Atlas connection string
+- `DATABASE_URL` - PostgreSQL connection URL (e.g. `postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council`)
 
 ### Markdown Rendering
 All ReactMarkdown components must be wrapped in `<div className="markdown-content">` for proper spacing. This class is defined globally in `index.css`.
@@ -150,23 +154,25 @@ Models are hardcoded in `backend/config.py`. Chairman can be same or different f
 2. **CORS Issues**: Currently allows all origins (`*`), restrict in production if needed
 3. **Ranking Parse Failures**: If models don't follow format, fallback regex extracts any "Response X" patterns in order
 4. **Missing Metadata**: Metadata is ephemeral (not persisted), only available in API responses
-5. **MongoDB Connection**: Ensure `MONGODB_URI` is set in `.env` before starting backend
+5. **PostgreSQL Connection**: Ensure `DATABASE_URL` is set in `.env` and PostgreSQL is running (`docker compose up -d`) before starting backend
 
 ## Deployment
 
 ### Local Development
 ```bash
-./scripts/setup.sh  # First time setup
-./scripts/start.sh  # Start servers
-./scripts/stop.sh   # Stop servers
+./scripts/setup.sh   # First time setup
+docker compose up -d # Start PostgreSQL
+./scripts/start.sh   # Start servers (also runs docker compose up -d)
+./scripts/stop.sh    # Stop servers
 ```
 
 ### Railway (Production)
 - Dockerfile in project root for backend deployment
 - Uses uv for Python dependency management
+- Add Railway PostgreSQL plugin — it auto-injects `DATABASE_URL`
 - Environment variables set in Railway dashboard:
   - `OPENROUTER_API_KEY`
-  - `MONGODB_URI`
+  - `DATABASE_URL` (auto-injected by PostgreSQL plugin)
   - `COUNCIL_MODELS` (optional, defaults in config.py)
   - `CHAIRMAN_MODEL` (optional, defaults in config.py)
 
@@ -201,3 +207,56 @@ Frontend: Display with tabs + validation UI
 ```
 
 The entire flow is async/parallel where possible to minimize latency.
+
+## Workflow Orchestration
+
+### 1. Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+## Task Management
+
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.

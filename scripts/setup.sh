@@ -32,6 +32,10 @@ if ! command -v npm &> /dev/null; then
 fi
 echo "  npm: $(npm --version)"
 
+if ! command -v docker &> /dev/null; then
+    echo "Warning: Docker is not installed. Required for local PostgreSQL."
+fi
+
 echo ""
 
 # Install Python dependencies
@@ -53,10 +57,10 @@ if [ ! -f .env ]; then
 # OpenRouter API Key (required)
 OPENROUTER_API_KEY=your-openrouter-api-key-here
 
-# MongoDB URI (required) - replace with your MongoDB Atlas connection string
-MONGODB_URI=your-mongodb-uri-here
+# PostgreSQL connection URL (local Docker default)
+DATABASE_URL=postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council
 EOF
-    echo "Please edit .env and add your API keys."
+    echo "Please edit .env and add your API key."
 else
     echo "Checking .env configuration..."
 
@@ -66,13 +70,13 @@ else
         echo "  OPENROUTER_API_KEY: configured"
     fi
 
-    if ! grep -q "MONGODB_URI" .env; then
-        echo "  Warning: MONGODB_URI not found in .env"
+    if ! grep -q "DATABASE_URL" .env; then
+        echo "  Warning: DATABASE_URL not found in .env"
         echo ""
         echo "  Add to your .env file:"
-        echo "  MONGODB_URI=your-mongodb-atlas-connection-string"
+        echo "  DATABASE_URL=postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council"
     else
-        echo "  MONGODB_URI: configured"
+        echo "  DATABASE_URL: configured"
     fi
 fi
 
@@ -80,5 +84,5 @@ echo ""
 echo "Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Ensure .env has OPENROUTER_API_KEY and MONGODB_URI set"
+echo "  1. Ensure .env has OPENROUTER_API_KEY and DATABASE_URL set"
 echo "  2. Run: ./scripts/start.sh"
