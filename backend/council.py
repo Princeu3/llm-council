@@ -2,16 +2,20 @@
 
 import re
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .config import CHAIRMAN_MODEL, COUNCIL_MODELS
 from .openrouter import query_model, query_models_parallel
 
 
-async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(
+    user_query: str,
+    council_models: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
     """Stage 1: Query all council models in parallel and collect responses."""
+    models = council_models or COUNCIL_MODELS
     messages = [{"role": "user", "content": user_query}]
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(models, messages)
 
     return [
         {"model": model, "response": response.get("content", "")}
@@ -23,6 +27,7 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
+    council_models: Optional[List[str]] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """Stage 2: Each model ranks the anonymized responses from Stage 1."""
     labels = [chr(65 + i) for i in range(len(stage1_results))]
@@ -68,8 +73,9 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
+    models = council_models or COUNCIL_MODELS
     messages = [{"role": "user", "content": ranking_prompt}]
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(models, messages)
 
     stage2_results = []
     for model, response in responses.items():
@@ -88,6 +94,7 @@ async def stage3_synthesize_final(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
     stage2_results: List[Dict[str, Any]],
+    chairman_model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Stage 3: Chairman synthesizes a final answer from all responses and rankings."""
     stage1_text = "\n\n".join(
@@ -114,15 +121,16 @@ Your task as Chairman is to synthesize all of this information into a single, co
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
-    response = await query_model(CHAIRMAN_MODEL, [{"role": "user", "content": chairman_prompt}])
+    chair = chairman_model or CHAIRMAN_MODEL
+    response = await query_model(chair, [{"role": "user", "content": chairman_prompt}])
 
     if response is None:
         return {
-            "model": CHAIRMAN_MODEL,
+            "model": chair,
             "response": "Error: Unable to generate final synthesis.",
         }
 
-    return {"model": CHAIRMAN_MODEL, "response": response.get("content", "")}
+    return {"model": chair, "response": response.get("content", "")}
 
 
 def parse_ranking_from_text(ranking_text: str) -> List[str]:
@@ -196,9 +204,13 @@ Title:"""
     return title
 
 
-async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
+async def run_full_council(
+    user_query: str,
+    council_models: Optional[List[str]] = None,
+    chairman_model: Optional[str] = None,
+) -> Tuple[List, List, Dict, Dict]:
     """Run the complete 3-stage council process. Returns (stage1, stage2, stage3, metadata)."""
-    stage1_results = await stage1_collect_responses(user_query)
+    stage1_results = await stage1_collect_responses(user_query, council_models)
 
     if not stage1_results:
         return [], [], {
@@ -206,9 +218,13 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
             "response": "All models failed to respond. Please try again.",
         }, {}
 
-    stage2_results, label_to_model = await stage2_collect_rankings(user_query, stage1_results)
+    stage2_results, label_to_model = await stage2_collect_rankings(
+        user_query, stage1_results, council_models
+    )
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-    stage3_result = await stage3_synthesize_final(user_query, stage1_results, stage2_results)
+    stage3_result = await stage3_synthesize_final(
+        user_query, stage1_results, stage2_results, chairman_model
+    )
 
     metadata = {
         "label_to_model": label_to_model,

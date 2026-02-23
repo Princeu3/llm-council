@@ -3,9 +3,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Build arg for API base URL
+# Build args for Vite env vars
 ARG VITE_API_BASE
 ENV VITE_API_BASE=$VITE_API_BASE
+
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 
 # Copy package files
 COPY package*.json ./

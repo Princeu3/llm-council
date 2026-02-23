@@ -51,27 +51,37 @@ async def create_tables():
             CREATE INDEX IF NOT EXISTS idx_conversations_created_at
             ON conversations (created_at DESC)
         """)
+        # Add user_id column for multi-tenant isolation
+        await conn.execute("""
+            ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user_id TEXT
+        """)
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_conversations_user_id
+            ON conversations (user_id)
+        """)
 
 
-async def create_conversation(conversation_id: str) -> Dict[str, Any]:
-    """Create a new conversation."""
+async def create_conversation(conversation_id: str, user_id: str) -> Dict[str, Any]:
+    """Create a new conversation owned by user_id."""
     async with _pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO conversations (id) VALUES ($1)
+            INSERT INTO conversations (id, user_id) VALUES ($1, $2)
             RETURNING id, created_at, title, messages
             """,
             conversation_id,
+            user_id,
         )
     return _row_to_dict(row)
 
 
-async def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
-    """Load a conversation from storage."""
+async def get_conversation(conversation_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    """Load a conversation from storage, scoped to user_id."""
     async with _pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, created_at, title, messages FROM conversations WHERE id = $1",
+            "SELECT id, created_at, title, messages FROM conversations WHERE id = $1 AND user_id = $2",
             conversation_id,
+            user_id,
         )
     return _row_to_dict(row) if row else None
 
@@ -93,15 +103,17 @@ async def save_conversation(conversation: Dict[str, Any]):
         )
 
 
-async def list_conversations() -> List[Dict[str, Any]]:
-    """List all conversations (metadata only)."""
+async def list_conversations(user_id: str) -> List[Dict[str, Any]]:
+    """List conversations for a specific user (metadata only)."""
     async with _pool.acquire() as conn:
         rows = await conn.fetch(
             """
             SELECT id, created_at, title, jsonb_array_length(messages) AS message_count
             FROM conversations
+            WHERE user_id = $1
             ORDER BY created_at DESC
-            """
+            """,
+            user_id,
         )
     return [
         {
@@ -147,24 +159,26 @@ async def add_assistant_message(
     })
 
 
-async def update_conversation_title(conversation_id: str, title: str):
-    """Update the title of a conversation."""
+async def update_conversation_title(conversation_id: str, title: str, user_id: str):
+    """Update the title of a conversation, scoped to user_id."""
     async with _pool.acquire() as conn:
         result = await conn.execute(
-            "UPDATE conversations SET title = $2 WHERE id = $1",
+            "UPDATE conversations SET title = $2 WHERE id = $1 AND user_id = $3",
             conversation_id,
             title,
+            user_id,
         )
     if result == "UPDATE 0":
         raise ValueError(f"Conversation {conversation_id} not found")
 
 
-async def delete_conversation(conversation_id: str) -> bool:
-    """Delete a conversation. Returns True if deleted, False if not found."""
+async def delete_conversation(conversation_id: str, user_id: str) -> bool:
+    """Delete a conversation, scoped to user_id. Returns True if deleted."""
     async with _pool.acquire() as conn:
         result = await conn.execute(
-            "DELETE FROM conversations WHERE id = $1",
+            "DELETE FROM conversations WHERE id = $1 AND user_id = $2",
             conversation_id,
+            user_id,
         )
     return result == "DELETE 1"
 

@@ -1,36 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: "Bricolage Grotesque", serif;
+  --font-body: "DM Sans", sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Custom brand colors */
+  --color-iris: var(--iris);
+  --color-wisteria: var(--wisteria);
+  --color-ivory: var(--ivory);
+}
+
+/*
+ * Iris:    #6D65D3 → oklch(0.53 0.16 285)
+ * Wisteria:#CCA3E7 → oklch(0.77 0.11 300)
+ * Ivory:  #FCFAEC → oklch(0.98 0.02 100)
+ */
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --radius: 0.75rem;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Brand tokens */
+  --iris: #6D65D3;
+  --wisteria: #CCA3E7;
+  --ivory: #FCFAEC;
+
+  /* Core theme — soft elegant light mode */
+  --background: #FDFCF7;
+  --foreground: #2D2B3D;
+  --card: #FFFFFF;
+  --card-foreground: #2D2B3D;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D2B3D;
+
+  /* Primary = Iris */
+  --primary: #6D65D3;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary = very light wisteria tint */
+  --secondary: #F3ECF8;
+  --secondary-foreground: #4A3F6B;
+
+  /* Muted = warm gray with purple undertone */
+  --muted: #F5F3F0;
+  --muted-foreground: #7C7893;
+
+  /* Accent = Wisteria light */
+  --accent: #EDE4F5;
+  --accent-foreground: #4A3F6B;
+
+  --destructive: #E5484D;
+  --border: #E8E5F0;
+  --input: #E8E5F0;
+  --ring: #6D65D3;
+
+  --chart-1: #6D65D3;
+  --chart-2: #CCA3E7;
+  --chart-3: #9B8FE8;
+  --chart-4: #E0D4F0;
+  --chart-5: #A78BFA;
+
+  /* Sidebar */
+  --sidebar: #FDFCF7;
+  --sidebar-foreground: #2D2B3D;
+  --sidebar-primary: #6D65D3;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F3ECF8;
+  --sidebar-accent-foreground: #4A3F6B;
+  --sidebar-border: #E8E5F0;
+  --sidebar-ring: #6D65D3;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: #f5f5f5;
-}
-
-#root {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
-
-/* Global markdown styling */
+/* Markdown content styling */
 .markdown-content {
   padding: 12px;
+  line-height: 1.7;
 }
 
 .markdown-content p {
@@ -48,14 +145,14 @@ body {
 .markdown-content h5,
 .markdown-content h6 {
   margin: 16px 0 8px 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: #2D2B3D;
 }
 
 .markdown-content h1:first-child,
 .markdown-content h2:first-child,
-.markdown-content h3:first-child,
-.markdown-content h4:first-child,
-.markdown-content h5:first-child,
-.markdown-content h6:first-child {
+.markdown-content h3:first-child {
   margin-top: 0;
 }
 
@@ -70,34 +167,36 @@ body {
 }
 
 .markdown-content pre {
-  background: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
+  background: #F5F3F0;
+  padding: 14px 16px;
+  border-radius: 8px;
   overflow-x: auto;
   margin: 0 0 12px 0;
+  border: 1px solid #E8E5F0;
 }
 
 .markdown-content code {
-  background: #f5f5f5;
+  background: #F3ECF8;
   padding: 2px 6px;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 0.9em;
+  border-radius: 4px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.875em;
+  color: #6D65D3;
 }
 
 .markdown-content pre code {
   background: none;
   padding: 0;
+  color: inherit;
 }
 
 .markdown-content blockquote {
   margin: 0 0 12px 0;
   padding-left: 16px;
-  border-left: 4px solid #ddd;
-  color: #666;
+  border-left: 3px solid #CCA3E7;
+  color: #7C7893;
 }
 
-/* Table styling */
 .markdown-content table {
   border-collapse: collapse;
   width: 100%;
@@ -109,20 +208,17 @@ body {
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid #ddd;
+  border: 1px solid #E8E5F0;
   padding: 10px 12px;
   text-align: left;
 }
 
 .markdown-content th {
-  background: #f0f0f0;
+  background: #F3ECF8;
   font-weight: 600;
+  color: #4A3F6B;
 }
 
 .markdown-content tr:nth-child(even) {
-  background: #fafafa;
-}
-
-.markdown-content tr:hover {
-  background: #f5f5f5;
+  background: #FDFCF7;
 }

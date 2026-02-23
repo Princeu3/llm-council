@@ -1,19 +1,28 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getModelShortName } from '../utils';
-import './Stage3.css';
+import { Badge } from '@/components/ui/badge';
+import { Scale, Crown } from 'lucide-react';
 
 export default function Stage3({ finalResponse }) {
   if (!finalResponse) return null;
 
   return (
-    <div className="stage stage3">
-      <h3 className="stage-title">Stage 3: Final Council Answer</h3>
-      <div className="final-response">
-        <div className="chairman-label">
-          Chairman: {getModelShortName(finalResponse.model)}
+    <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.03] to-wisteria/[0.05] overflow-hidden mb-3">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-primary/10">
+        <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+          <Scale className="w-3 h-3 text-primary-foreground" />
         </div>
-        <div className="final-text markdown-content">
+        <span className="text-sm font-semibold font-[--font-display] text-foreground">
+          Council's Answer
+        </span>
+        <Badge variant="outline" className="text-[10px] font-normal border-primary/30 text-primary ml-auto">
+          <Crown className="w-2.5 h-2.5 mr-1" />
+          {getModelShortName(finalResponse.model)}
+        </Badge>
+      </div>
+      <div className="p-2">
+        <div className="markdown-content text-sm leading-relaxed">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalResponse.response}</ReactMarkdown>
         </div>
       </div>

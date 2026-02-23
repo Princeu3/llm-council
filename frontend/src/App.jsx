@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth, SignedIn, SignedOut } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import LandingPage from './components/LandingPage';
 import { api } from './api';
-import './App.css';
+import { useModelSettings } from './hooks/useModelSettings';
 
 /**
  * Immutably update the last message in a conversation's messages array.
- * Used by SSE event handlers to progressively build the assistant response.
  */
 function updateLastMessage(prev, updater) {
   const messages = [...prev.messages];
@@ -15,6 +16,8 @@ function updateLastMessage(prev, updater) {
 }
 
 function App() {
+  const { getToken, isLoaded } = useAuth();
+  const modelSettings = useModelSettings();
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -24,10 +27,16 @@ function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadConversations();
-  }, []);
+    api.setTokenGetter(getToken);
+  }, [getToken]);
 
-  // Load conversation details when selected (skip temp IDs -- they haven't been created yet)
+  useEffect(() => {
+    if (isLoaded) {
+      loadConversations();
+      modelSettings.fetchModels();
+    }
+  }, [isLoaded]);
+
   useEffect(() => {
     if (currentConversationId && !currentConversationId.startsWith('temp-')) {
       loadConversation(currentConversationId);
@@ -203,7 +212,7 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      });
+      }, modelSettings.modelConfig);
     } catch (err) {
       console.error('Failed to send message:', err);
       setError(err.message || 'Failed to send message');
@@ -213,28 +222,36 @@ function App() {
       }));
       setIsLoading(false);
     }
-  }, [currentConversationId, loadConversations]);
+  }, [currentConversationId, loadConversations, modelSettings.modelConfig]);
 
   return (
-    <div className="app">
-      <Sidebar
-        conversations={conversations}
-        currentConversationId={currentConversationId}
-        onSelectConversation={handleSelectConversation}
-        onNewConversation={handleNewConversation}
-        onRenameConversation={handleRenameConversation}
-        onDeleteConversation={handleDeleteConversation}
-        isCreating={isCreatingConversation}
-      />
-      <ChatInterface
-        conversation={currentConversation}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        isLoadingConversation={isLoadingConversation}
-        error={error}
-        onClearError={() => setError(null)}
-      />
-    </div>
+    <>
+      <SignedOut>
+        <LandingPage />
+      </SignedOut>
+      <SignedIn>
+        <div className="flex h-screen w-screen overflow-hidden bg-[--background]">
+          <Sidebar
+            conversations={conversations}
+            currentConversationId={currentConversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
+            onRenameConversation={handleRenameConversation}
+            onDeleteConversation={handleDeleteConversation}
+            isCreating={isCreatingConversation}
+            modelSettings={modelSettings}
+          />
+          <ChatInterface
+            conversation={currentConversation}
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+            isLoadingConversation={isLoadingConversation}
+            error={error}
+            onClearError={() => setError(null)}
+          />
+        </div>
+      </SignedIn>
+    </>
   );
 }
 

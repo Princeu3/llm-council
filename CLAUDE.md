@@ -34,19 +34,28 @@ LLM Council is a 3-stage deliberation system where multiple LLMs collaboratively
 - `parse_ranking_from_text()`: Extracts "FINAL RANKING:" section, handles both numbered lists and plain format
 - `calculate_aggregate_rankings()`: Computes average rank position across all peer evaluations
 
+**`auth.py`** - Clerk Authentication
+- `init_clerk()`: Reads `CLERK_SECRET_KEY`, creates Clerk SDK instance, reads optional `CLERK_AUTHORIZED_PARTIES`
+- `get_current_user(request) -> str`: FastAPI dependency that verifies Clerk JWT
+  - Converts Starlette Request to httpx.Request (required by Clerk SDK)
+  - Calls `sdk.authenticate_request()` with authorized parties
+  - Returns `user_id` (JWT `sub` claim) or raises 401
+
 **`storage.py`**
 - PostgreSQL-based conversation storage using asyncpg (async driver)
 - Uses `DATABASE_URL` environment variable for connection
 - Connection pool created at startup via FastAPI lifespan, closed at shutdown
-- Single `conversations` table with JSONB `messages` column
-- Each conversation: `{id, created_at, title, messages[]}`
+- Single `conversations` table with JSONB `messages` column + `user_id TEXT` column
+- Each conversation: `{id, user_id, created_at, title, messages[]}`
+- All queries scoped by `user_id` for multi-tenant isolation
 - Assistant messages contain: `{role, stage1, stage2, stage3}`
 - Atomic message appends via `messages || jsonb_build_array()`
 - Note: metadata (label_to_model, aggregate_rankings) is NOT persisted to storage, only returned via API
 
 **`main.py`**
 - FastAPI app with CORS enabled for all origins
-- Uses `lifespan` context manager for PostgreSQL pool init/shutdown + table creation
+- Uses `lifespan` context manager for Clerk init + PostgreSQL pool init/shutdown + table creation
+- All endpoints except `GET /` (health check) require `Depends(get_current_user)`
 - POST `/api/conversations/{id}/message/stream` - SSE streaming endpoint (preferred)
 - POST `/api/conversations/{id}/message` - Non-streaming endpoint
 - DELETE `/api/conversations/{id}` - Delete conversation
@@ -58,11 +67,14 @@ LLM Council is a 3-stage deliberation system where multiple LLMs collaboratively
 **`App.jsx`**
 - Main orchestration: manages conversations list and current conversation
 - Uses SSE streaming for real-time stage updates
+- Auth gate: `<SignedOut>` shows landing page, `<SignedIn>` shows app
+- Wires `getToken` from `useAuth()` into API client on mount
 - Handles message sending and metadata storage
 
 **`api.js`**
 - API client with SSE streaming support via `sendMessageStream()`
 - Uses `VITE_API_BASE` env var or defaults to `http://localhost:8001`
+- `setTokenGetter(fn)` + `getAuthHeaders()` transparently inject `Authorization: Bearer` on all requests
 
 **`components/ChatInterface.jsx`**
 - Multiline textarea (3 rows, resizable)
@@ -137,10 +149,26 @@ Located in `scripts/` folder:
 - `start.sh` - Start both backend and frontend
 - `stop.sh` - Stop running servers
 
+### Authentication (Clerk)
+- Frontend uses `@clerk/clerk-react` for sign-in/sign-up (GitHub + Google OAuth)
+- Backend uses `clerk-backend-api` SDK to verify JWTs from frontend
+- `ClerkProvider` wraps `<App />` in `main.jsx`
+- `UserButton` displayed in sidebar header for account management
+- All API calls include `Authorization: Bearer <clerk_session_token>`
+- Backend `get_current_user` dependency extracts `user_id` from JWT `sub` claim
+- Conversations are scoped by `user_id` column in PostgreSQL
+
 ### Environment Variables
 Required in `.env`:
 - `OPENROUTER_API_KEY` - API key for OpenRouter
 - `DATABASE_URL` - PostgreSQL connection URL (e.g. `postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council`)
+- `CLERK_SECRET_KEY` - Clerk secret key for JWT verification
+
+Required in `frontend/.env.development` / `frontend/.env.production`:
+- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key for frontend SDK
+
+Optional:
+- `CLERK_AUTHORIZED_PARTIES` - Comma-separated list of authorized party URLs (for JWT `azp` claim validation)
 
 ### Markdown Rendering
 All ReactMarkdown components must be wrapped in `<div className="markdown-content">` for proper spacing. This class is defined globally in `index.css`.
@@ -173,8 +201,11 @@ docker compose up -d # Start PostgreSQL
 - Environment variables set in Railway dashboard:
   - `OPENROUTER_API_KEY`
   - `DATABASE_URL` (auto-injected by PostgreSQL plugin)
+  - `CLERK_SECRET_KEY`
   - `COUNCIL_MODELS` (optional, defaults in config.py)
   - `CHAIRMAN_MODEL` (optional, defaults in config.py)
+- Frontend Railway service needs:
+  - `VITE_CLERK_PUBLISHABLE_KEY` (build arg)
 
 ## Future Enhancement Ideas
 
