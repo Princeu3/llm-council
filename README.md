@@ -1,87 +1,130 @@
 # LLM Council
 
-![llmcouncil](header.jpg)
+![LLM Council](header.jpg)
 
-The idea of this repo is that instead of asking a question to your favorite LLM provider (e.g. OpenAI GPT 5.1, Google Gemini 3.0 Pro, Anthropic Claude Sonnet 4.5, xAI Grok 4, eg.c), you can group them into your "LLM Council". This repo is a simple, local web app that essentially looks like ChatGPT except it uses OpenRouter to send your query to multiple LLMs, it then asks them to review and rank each other's work, and finally a Chairman LLM produces the final response.
+Instead of asking one LLM and hoping for the best, **LLM Council** sends your question to multiple frontier models, has them anonymously peer-review each other's answers, and synthesizes a single best response.
 
-In a bit more detail, here is what happens when you submit a query:
+## How It Works
 
-1. **Stage 1: First opinions**. The user query is given to all LLMs individually, and the responses are collected. The individual responses are shown in a "tab view", so that the user can inspect them all one by one.
-2. **Stage 2: Review**. Each individual LLM is given the responses of the other LLMs. Under the hood, the LLM identities are anonymized so that the LLM can't play favorites when judging their outputs. The LLM is asked to rank them in accuracy and insight.
-3. **Stage 3: Final response**. The designated Chairman of the LLM Council takes all of the model's responses and compiles them into a single final answer that is presented to the user.
+When you submit a query, three stages run in sequence:
 
-## Vibe Code Alert
+1. **Stage 1 — First Opinions**: Your query is sent in parallel to every council member (e.g. GPT-5.2, Claude Sonnet 4.6, Gemini 3.1 Pro, Grok 4.1). Each response is shown in its own tab so you can inspect them individually.
 
-This project was 99% vibe coded as a fun Saturday hack because I wanted to explore and evaluate a number of LLMs side by side in the process of [reading books together with LLMs](https://x.com/karpathy/status/1990577951671509438). It's nice and useful to see multiple responses side by side, and also the cross-opinions of all LLMs on each other's outputs. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+2. **Stage 2 — Peer Review**: Each model receives the other models' responses under anonymous labels ("Response A", "Response B", ...) and ranks them by accuracy and insight. Anonymization prevents models from playing favorites. You can read every model's raw evaluation and verify the parsed rankings yourself.
 
-## Setup
+3. **Stage 3 — Final Response**: A designated Chairman model takes all responses and peer reviews, then synthesizes one definitive answer.
 
-### 1. Install Dependencies
+The entire pipeline is async and parallel where possible for minimal latency.
 
-The project uses [uv](https://docs.astral.sh/uv/) for project management.
+## Features
 
-**Backend:**
-```bash
-uv sync
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-cd ..
-```
-
-### 2. Configure API Key
-
-Create a `.env` file in the project root:
-
-```bash
-OPENROUTER_API_KEY=sk-or-v1-...
-```
-
-Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
-
-### 3. Configure Models (Optional)
-
-Edit `backend/config.py` to customize the council:
-
-```python
-COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
-]
-
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
-```
-
-## Running the Application
-
-**Option 1: Use the start script**
-```bash
-./start.sh
-```
-
-**Option 2: Run manually**
-
-Terminal 1 (Backend):
-```bash
-uv run python -m backend.main
-```
-
-Terminal 2 (Frontend):
-```bash
-cd frontend
-npm run dev
-```
-
-Then open http://localhost:5173 in your browser.
+- **Multi-model deliberation** — configurable council of any OpenRouter-supported models
+- **Anonymous peer review** — prevents bias in cross-model evaluation
+- **Full transparency** — inspect every individual response, raw evaluation, and parsed ranking
+- **Aggregate rankings** — see which model was rated best on average across all peer reviews
+- **Conversation history** — persistent conversations stored in PostgreSQL
+- **Authentication** — Clerk-based auth with GitHub and Google OAuth
+- **SSE streaming** — real-time stage-by-stage updates as the council deliberates
+- **Model settings** — configure council members and chairman from the UI
 
 ## Tech Stack
 
-- **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
-- **Frontend:** React + Vite, react-markdown for rendering
-- **Storage:** JSON files in `data/conversations/`
-- **Package Management:** uv for Python, npm for JavaScript
+| Layer | Technology |
+|-------|-----------|
+| Backend | FastAPI, Python 3.10+, async httpx |
+| Frontend | React + Vite, Tailwind CSS, shadcn/ui |
+| Database | PostgreSQL (asyncpg) |
+| Auth | Clerk |
+| LLM Gateway | OpenRouter |
+| Package Mgmt | uv (Python), npm (JS) |
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- Docker (for PostgreSQL)
+- [uv](https://docs.astral.sh/uv/) package manager
+- An [OpenRouter](https://openrouter.ai/) API key
+- A [Clerk](https://clerk.com/) application (for auth)
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/Princeu3/llm-council.git
+cd llm-council
+
+# Backend
+uv sync
+
+# Frontend
+cd frontend && npm install && cd ..
+```
+
+### 2. Configure environment
+
+Create `.env` in the project root:
+
+```bash
+OPENROUTER_API_KEY=sk-or-v1-...
+DATABASE_URL=postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council
+CLERK_SECRET_KEY=sk_live_...
+```
+
+Create `frontend/.env.development`:
+
+```bash
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+### 3. Start PostgreSQL
+
+```bash
+docker compose up -d
+```
+
+### 4. Run
+
+```bash
+# Option A: Use the start script
+./scripts/start.sh
+
+# Option B: Run manually
+# Terminal 1 — Backend
+uv run python -m backend.main
+
+# Terminal 2 — Frontend
+cd frontend && npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+### Configure Models
+
+Edit `backend/config.py` to customize which models sit on the council and which one chairs:
+
+```python
+COUNCIL_MODELS = [
+    "google/gemini-3.1-pro-preview",
+    "anthropic/claude-sonnet-4.6",
+    "openai/gpt-5.2",
+    "x-ai/grok-4.1-fast",
+]
+
+CHAIRMAN_MODEL = "google/gemini-3.1-pro-preview"
+```
+
+Any model available on [OpenRouter](https://openrouter.ai/models) works.
+
+## Deployment
+
+The project includes a `Dockerfile` and `railway.toml` for deploying the backend to [Railway](https://railway.com/). Add a PostgreSQL plugin and set the environment variables in the Railway dashboard.
+
+## Credit
+
+Originally inspired by [Andrej Karpathy's LLM Council concept](https://x.com/karpathy/status/1990577951671509438) for evaluating LLMs side-by-side while reading books with AI.
+
+## License
+
+MIT
