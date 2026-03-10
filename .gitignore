@@ -11,6 +11,10 @@ wheels/
 
 # Keys and secrets
 .env
+.env.local
+.env.development
+.env.production
+!.env.example
 
 # Data files
 data/
@@ -19,6 +23,8 @@ data/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/.env*
+!frontend/.env.example
 # Local Netlify folder
 .netlify
 

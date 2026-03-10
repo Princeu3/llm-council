@@ -2,7 +2,7 @@
 
 ![LLM Council](header.jpg)
 
-Instead of asking one LLM and hoping for the best, **LLM Council** sends your question to multiple frontier models, has them anonymously peer-review each other's answers, and synthesizes a single best response.
+Instead of asking one LLM and hoping for the best, **LLM Council** sends your question to multiple frontier models, has them anonymously peer-review each other's answers, and synthesizes a single best response. Think of it as a panel of AI experts that debate before giving you a final answer.
 
 ## How It Works
 
@@ -64,17 +64,25 @@ cd frontend && npm install && cd ..
 
 ### 2. Configure environment
 
-Create `.env` in the project root:
+Copy the example env files and fill in your keys:
+
+```bash
+cp .env.example .env
+cp frontend/.env.example frontend/.env.development
+```
+
+Edit `.env`:
 
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-...
 DATABASE_URL=postgresql://llmcouncil:llmcouncil@localhost:5432/llm_council
-CLERK_SECRET_KEY=sk_live_...
+CLERK_SECRET_KEY=sk_test_...
 ```
 
-Create `frontend/.env.development`:
+Edit `frontend/.env.development`:
 
 ```bash
+VITE_API_BASE=http://localhost:8001
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
@@ -121,10 +129,24 @@ Any model available on [OpenRouter](https://openrouter.ai/models) works.
 
 The project includes a `Dockerfile` and `railway.toml` for deploying the backend to [Railway](https://railway.com/). Add a PostgreSQL plugin and set the environment variables in the Railway dashboard.
 
-## Credit
+## Contributing
 
-Originally inspired by [Andrej Karpathy's LLM Council concept](https://x.com/karpathy/status/1990577951671509438) for evaluating LLMs side-by-side while reading books with AI.
+Contributions are welcome! Here's how to get started:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Make your changes
+4. Run the app locally to verify everything works
+5. Commit your changes (`git commit -m 'Add my feature'`)
+6. Push to your branch (`git push origin feature/my-feature`)
+7. Open a Pull Request
+
+If you find a bug or have a feature request, please [open an issue](https://github.com/Princeu3/llm-council/issues).
+
+## Acknowledgments
+
+This project is a fork of [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-council), originally built as a tool for evaluating LLMs side-by-side while reading books with AI. This version extends the original with a full-stack web application, persistent conversations, authentication, streaming, and a configurable UI.
 
 ## License
 
-MIT
+[MIT](LICENSE)
