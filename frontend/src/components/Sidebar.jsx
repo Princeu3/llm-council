@@ -285,7 +285,7 @@ function Sidebar({
   }
 
   return (
-    <div className="w-[280px] h-screen flex flex-col bg-[--background] border-r border-border shrink-0">
+    <div className="w-[280px] h-full flex flex-col bg-[--background] border-r border-border shrink-0">
       <SidebarContent {...contentProps} />
     </div>
   );

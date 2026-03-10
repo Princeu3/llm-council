@@ -234,7 +234,7 @@ function App() {
         <LandingPage />
       </SignedOut>
       <SignedIn>
-        <div className="flex h-dvh w-screen overflow-hidden bg-[--background]">
+        <div className="flex h-full w-full overflow-hidden bg-[--background]">
           <Sidebar
             conversations={conversations}
             currentConversationId={currentConversationId}

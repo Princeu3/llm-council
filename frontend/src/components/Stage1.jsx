@@ -13,18 +13,18 @@ export default function Stage1({ responses, collapsed = false }) {
   if (!responses || responses.length === 0) return null;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-3">
-      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors group">
-        <div className="flex items-center gap-2.5">
-          <MessageSquare className="w-4 h-4 text-iris" />
-          <span className="text-sm font-semibold font-[--font-display] text-foreground">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-3 min-w-0">
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-3 sm:px-4 py-2.5 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors group">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <MessageSquare className="w-4 h-4 text-iris shrink-0" />
+          <span className="text-sm font-semibold font-[--font-display] text-foreground truncate">
             Individual Responses
           </span>
-          <Badge variant="secondary" className="text-xs font-normal">
+          <Badge variant="secondary" className="text-xs font-normal shrink-0">
             {responses.length} models
           </Badge>
         </div>
-        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </CollapsibleTrigger>
 
       <CollapsibleContent className="mt-2">
@@ -45,13 +45,13 @@ export default function Stage1({ responses, collapsed = false }) {
             </div>
 
             {responses.map((resp, index) => (
-              <TabsContent key={index} value={String(index)} className="m-0 p-0">
-                <div className="px-2 pt-2">
-                  <span className="text-[11px] font-mono text-muted-foreground px-2">
+              <TabsContent key={index} value={String(index)} className="m-0 p-0 min-w-0">
+                <div className="px-2 pt-2 overflow-hidden">
+                  <span className="text-[11px] font-mono text-muted-foreground px-2 block truncate">
                     {resp.model}
                   </span>
                 </div>
-                <div className="p-2">
+                <div className="p-2 min-w-0">
                   <div className="markdown-content text-sm">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{resp.response}</ReactMarkdown>
                   </div>
