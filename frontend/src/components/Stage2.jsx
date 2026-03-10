@@ -53,7 +53,7 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings, coll
               {aggregateRankings.map((agg, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-card/80 border border-border"
+                  className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg bg-card/80 border border-border"
                 >
                   <span className={`
                     w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0
@@ -61,13 +61,13 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings, coll
                   `}>
                     {index + 1}
                   </span>
-                  <span className="text-sm font-medium text-foreground flex-1">
+                  <span className="text-sm font-medium text-foreground flex-1 truncate">
                     {getModelShortName(agg.model)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground shrink-0">
                     Avg: {agg.average_rank.toFixed(2)}
                   </span>
-                  <Badge variant="outline" className="text-[10px] font-normal">
+                  <Badge variant="outline" className="text-[10px] font-normal shrink-0 hidden sm:inline-flex">
                     {agg.rankings_count} votes
                   </Badge>
                 </div>
@@ -86,13 +86,13 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings, coll
           </div>
 
           <Tabs defaultValue="0">
-            <div className="border-b border-border px-1 pt-1">
-              <TabsList className="h-auto p-0 bg-transparent gap-0">
+            <div className="border-b border-border px-1 pt-1 overflow-x-auto scrollbar-hide">
+              <TabsList className="h-auto p-0 bg-transparent gap-0 w-max min-w-full">
                 {rankings.map((rank, index) => (
                   <TabsTrigger
                     key={index}
                     value={String(index)}
-                    className="rounded-t-lg rounded-b-none px-4 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent"
+                    className="rounded-t-lg rounded-b-none px-3 sm:px-4 py-2 text-xs font-medium whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent"
                   >
                     {getModelShortName(rank.model)}
                   </TabsTrigger>

@@ -30,13 +30,13 @@ export default function Stage1({ responses, collapsed = false }) {
       <CollapsibleContent className="mt-2">
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <Tabs defaultValue="0">
-            <div className="border-b border-border px-1 pt-1">
-              <TabsList className="h-auto p-0 bg-transparent gap-0">
+            <div className="border-b border-border px-1 pt-1 overflow-x-auto scrollbar-hide">
+              <TabsList className="h-auto p-0 bg-transparent gap-0 w-max min-w-full">
                 {responses.map((resp, index) => (
                   <TabsTrigger
                     key={index}
                     value={String(index)}
-                    className="rounded-t-lg rounded-b-none px-4 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent"
+                    className="rounded-t-lg rounded-b-none px-3 sm:px-4 py-2 text-xs font-medium whitespace-nowrap data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary border-b-2 border-transparent"
                   >
                     {getModelShortName(resp.model)}
                   </TabsTrigger>

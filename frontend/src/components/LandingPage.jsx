@@ -15,23 +15,23 @@ function LandingPage() {
     <div className="min-h-screen bg-[--background] overflow-x-hidden">
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-[--background]/80 border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Crown className="w-4 h-4 text-primary-foreground" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-foreground" />
             </div>
-            <span className="font-[--font-display] text-lg font-bold tracking-tight text-foreground">
+            <span className="font-[--font-display] text-base sm:text-lg font-bold tracking-tight text-foreground">
               LLM Council
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <SignInButton mode="modal">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm px-2 sm:px-3">
                 Sign in
               </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5">
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-3 sm:px-5 text-xs sm:text-sm">
                 Get Started
               </Button>
             </SignUpButton>
@@ -40,11 +40,11 @@ function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-32 pb-24 px-6">
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6 overflow-hidden">
         {/* Decorative blobs */}
-        <div className="absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full bg-wisteria/15 blur-[120px] pointer-events-none" />
-        <div className="absolute top-40 right-1/4 w-[400px] h-[400px] rounded-full bg-iris/10 blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-ivory/60 blur-[80px] pointer-events-none" />
+        <div className="absolute top-20 left-1/4 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full bg-wisteria/15 blur-[120px] pointer-events-none" />
+        <div className="absolute top-40 right-1/4 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] rounded-full bg-iris/10 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[200px] sm:h-[300px] rounded-full bg-ivory/60 blur-[80px] pointer-events-none" />
 
         <div className="max-w-4xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary border border-border mb-8 animate-in fade-in slide-in-from-bottom-3 duration-700">
@@ -54,7 +54,7 @@ function LandingPage() {
             </span>
           </div>
 
-          <h1 className="font-[--font-display] text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-[1.1]">
+          <h1 className="font-[--font-display] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-[1.1]">
             One question.
             <br />
             <span className="bg-gradient-to-r from-iris via-wisteria to-iris bg-clip-text text-transparent">
@@ -69,15 +69,15 @@ function LandingPage() {
             with anonymous peer review — so you get the most thoughtful, well-vetted answer possible.
           </p>
 
-          <div className="flex items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300">
             <SignUpButton mode="modal">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-12 text-base font-semibold shadow-lg shadow-iris/20 transition-all hover:shadow-xl hover:shadow-iris/30 hover:-translate-y-0.5">
+              <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-12 text-base font-semibold shadow-lg shadow-iris/20 transition-all hover:shadow-xl hover:shadow-iris/30 hover:-translate-y-0.5">
                 Start a Council
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </SignUpButton>
-            <a href="#how-it-works">
-              <Button variant="outline" size="lg" className="rounded-full px-8 h-12 text-base border-border hover:bg-secondary">
+            <a href="#how-it-works" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-full px-8 h-12 text-base border-border hover:bg-secondary">
                 See how it works
               </Button>
             </a>
@@ -86,7 +86,7 @@ function LandingPage() {
       </section>
 
       {/* Model Parade */}
-      <section className="py-16 px-6">
+      <section className="py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-sm font-medium text-muted-foreground mb-8 uppercase tracking-widest">
             The Council Members
@@ -116,7 +116,7 @@ function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-6 scroll-mt-20">
+      <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 scroll-mt-20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-[--font-display] text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-4">
@@ -193,7 +193,7 @@ function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-24 px-6 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-transparent via-secondary/30 to-transparent">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-[--font-display] text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-4">
@@ -230,9 +230,9 @@ function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="relative rounded-3xl bg-gradient-to-br from-iris/5 via-wisteria/8 to-iris/5 border border-border p-12 sm:p-16 overflow-hidden">
+          <div className="relative rounded-3xl bg-gradient-to-br from-iris/5 via-wisteria/8 to-iris/5 border border-border p-8 sm:p-12 md:p-16 overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-wisteria/10 blur-[80px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-iris/10 blur-[60px] pointer-events-none" />
 
@@ -256,7 +256,7 @@ function LandingPage() {
 
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-border">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
               <Crown className="w-3 h-3 text-primary-foreground" />

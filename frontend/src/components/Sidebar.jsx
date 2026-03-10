@@ -3,10 +3,15 @@ import { UserButton, useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Plus, MoreHorizontal, Pencil, Trash2, Check, X, Crown, Loader2 } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
-function Sidebar({
+function SidebarContent({
   conversations,
   currentConversationId,
   onSelectConversation,
@@ -15,6 +20,7 @@ function Sidebar({
   onDeleteConversation,
   isCreating,
   modelSettings,
+  onConversationSelected,
 }) {
   const { user } = useUser();
   const [editingId, setEditingId] = useState(null);
@@ -72,8 +78,18 @@ function Sidebar({
     else if (e.key === 'Escape') handleCancelEdit(e);
   };
 
+  const handleSelectConv = (id) => {
+    onSelectConversation(id);
+    onConversationSelected?.();
+  };
+
+  const handleNewConv = () => {
+    onNewConversation();
+    onConversationSelected?.();
+  };
+
   return (
-    <div className="w-[280px] h-screen flex flex-col bg-[--background] border-r border-border shrink-0">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 pb-3">
         <div className="flex items-center justify-between mb-4">
@@ -89,7 +105,7 @@ function Sidebar({
 
         <Button
           className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-9 rounded-lg text-sm font-medium"
-          onClick={onNewConversation}
+          onClick={handleNewConv}
           disabled={isCreating}
         >
           {isCreating ? (
@@ -127,7 +143,7 @@ function Sidebar({
                   }
                   ${conv.id.startsWith('temp-') ? 'opacity-60 pointer-events-none' : ''}
                 `}
-                onClick={() => !conv.id.startsWith('temp-') && onSelectConversation(conv.id)}
+                onClick={() => !conv.id.startsWith('temp-') && handleSelectConv(conv.id)}
               >
                 {editingId === conv.id ? (
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -226,6 +242,51 @@ function Sidebar({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Sidebar({
+  conversations,
+  currentConversationId,
+  onSelectConversation,
+  onNewConversation,
+  onRenameConversation,
+  onDeleteConversation,
+  isCreating,
+  modelSettings,
+  isMobile,
+  mobileOpen,
+  onMobileOpenChange,
+}) {
+  const contentProps = {
+    conversations,
+    currentConversationId,
+    onSelectConversation,
+    onNewConversation,
+    onRenameConversation,
+    onDeleteConversation,
+    isCreating,
+    modelSettings,
+  };
+
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
+        <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SidebarContent
+            {...contentProps}
+            onConversationSelected={() => onMobileOpenChange(false)}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <div className="w-[280px] h-screen flex flex-col bg-[--background] border-r border-border shrink-0">
+      <SidebarContent {...contentProps} />
     </div>
   );
 }

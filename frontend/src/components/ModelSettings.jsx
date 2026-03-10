@@ -53,7 +53,7 @@ export default function ModelSettings({
           )}
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[520px] gap-0 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[520px] gap-0 p-0 overflow-hidden max-h-[90dvh] w-[calc(100%-2rem)] sm:w-full rounded-xl">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="font-[--font-display] text-xl font-bold tracking-tight">
             Model Settings

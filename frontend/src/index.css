@@ -222,3 +222,42 @@
 .markdown-content tr:nth-child(even) {
   background: #FDFCF7;
 }
+
+/* Hide scrollbar for horizontal tab scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile markdown adjustments */
+@media (max-width: 640px) {
+  .markdown-content {
+    padding: 8px;
+  }
+
+  .markdown-content pre {
+    padding: 10px 12px;
+    font-size: 0.8em;
+  }
+
+  .markdown-content th,
+  .markdown-content td {
+    padding: 6px 8px;
+    font-size: 0.85em;
+  }
+
+  .markdown-content ul,
+  .markdown-content ol {
+    padding-left: 18px;
+  }
+}
+
+/* Use dvh for full-height layouts on mobile */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
+}

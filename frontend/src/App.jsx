@@ -5,6 +5,8 @@ import ChatInterface from './components/ChatInterface';
 import LandingPage from './components/LandingPage';
 import { api } from './api';
 import { useModelSettings } from './hooks/useModelSettings';
+import { useIsMobile } from './hooks/useIsMobile';
+import { Crown, Menu } from 'lucide-react';
 
 /**
  * Immutably update the last message in a conversation's messages array.
@@ -18,6 +20,7 @@ function updateLastMessage(prev, updater) {
 function App() {
   const { getToken, isLoaded } = useAuth();
   const modelSettings = useModelSettings();
+  const isMobile = useIsMobile();
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -25,6 +28,7 @@ function App() {
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     api.setTokenGetter(getToken);
@@ -230,7 +234,7 @@ function App() {
         <LandingPage />
       </SignedOut>
       <SignedIn>
-        <div className="flex h-screen w-screen overflow-hidden bg-[--background]">
+        <div className="flex h-dvh w-screen overflow-hidden bg-[--background]">
           <Sidebar
             conversations={conversations}
             currentConversationId={currentConversationId}
@@ -240,15 +244,39 @@ function App() {
             onDeleteConversation={handleDeleteConversation}
             isCreating={isCreatingConversation}
             modelSettings={modelSettings}
+            isMobile={isMobile}
+            mobileOpen={sidebarOpen}
+            onMobileOpenChange={setSidebarOpen}
           />
-          <ChatInterface
-            conversation={currentConversation}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            isLoadingConversation={isLoadingConversation}
-            error={error}
-            onClearError={() => setError(null)}
-          />
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Mobile header */}
+            {isMobile && (
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-[--background] shrink-0">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-1.5 -ml-1 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <Menu className="w-5 h-5 text-foreground" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                    <Crown className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                  <span className="font-[--font-display] text-sm font-bold tracking-tight text-foreground truncate">
+                    {currentConversation?.title || 'LLM Council'}
+                  </span>
+                </div>
+              </div>
+            )}
+            <ChatInterface
+              conversation={currentConversation}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              isLoadingConversation={isLoadingConversation}
+              error={error}
+              onClearError={() => setError(null)}
+            />
+          </div>
         </div>
       </SignedIn>
     </>

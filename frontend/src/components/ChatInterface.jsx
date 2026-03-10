@@ -10,16 +10,16 @@ import { Send, Loader2, Crown, X, MessageSquare, Users, Shield, Scale } from 'lu
 function StageProgress({ loading, stage1, stage2, stage3 }) {
   const stages = [
     { key: 'stage1', label: 'Responses', icon: MessageSquare, done: !!stage1, active: loading?.stage1 },
-    { key: 'stage2', label: 'Peer Review', icon: Shield, done: !!stage2, active: loading?.stage2 },
+    { key: 'stage2', label: 'Review', icon: Shield, done: !!stage2, active: loading?.stage2 },
     { key: 'stage3', label: 'Synthesis', icon: Scale, done: !!stage3, active: loading?.stage3 },
   ];
 
   return (
-    <div className="flex items-center gap-1 mb-4">
+    <div className="flex items-center gap-1 mb-4 overflow-x-auto">
       {stages.map((s, i) => (
-        <div key={s.key} className="flex items-center">
+        <div key={s.key} className="flex items-center shrink-0">
           <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
               s.done
                 ? 'bg-primary/10 text-primary'
                 : s.active
@@ -37,7 +37,7 @@ function StageProgress({ loading, stage1, stage2, stage3 }) {
             <span>{s.label}</span>
           </div>
           {i < stages.length - 1 && (
-            <div className={`w-6 h-px mx-1 transition-colors duration-300 ${
+            <div className={`w-4 sm:w-6 h-px mx-0.5 sm:mx-1 transition-colors duration-300 ${
               s.done ? 'bg-primary/30' : 'bg-border'
             }`} />
           )}
@@ -124,9 +124,9 @@ function ChatInterface({
     <div className="flex-1 flex flex-col bg-[--background] min-w-0">
       {/* Error Banner */}
       {error && (
-        <div className="mx-4 mt-3 px-4 py-2.5 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
+        <div className="mx-3 sm:mx-4 mt-3 px-3 sm:px-4 py-2.5 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
           <span className="text-sm text-destructive">{error}</span>
-          <button onClick={onClearError} className="p-0.5 hover:bg-destructive/10 rounded">
+          <button onClick={onClearError} className="p-0.5 hover:bg-destructive/10 rounded shrink-0 ml-2">
             <X className="w-4 h-4 text-destructive" />
           </button>
         </div>
@@ -134,10 +134,10 @@ function ChatInterface({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-4xl mx-auto px-6 py-6">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
           {conversation.messages.length === 0 ? (
             <div className="flex items-center justify-center h-[50vh]">
-              <div className="text-center max-w-lg">
+              <div className="text-center max-w-lg px-2">
                 <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-5">
                   <Users className="w-7 h-7 text-primary" />
                 </div>
@@ -151,16 +151,16 @@ function ChatInterface({
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {conversation.messages.map((msg, index) => (
                 <div key={index}>
                   {msg.role === 'user' ? (
                     <div className="flex justify-end mb-2">
-                      <div className="max-w-[80%]">
+                      <div className="max-w-[90%] sm:max-w-[80%]">
                         <div className="text-xs font-medium text-muted-foreground mb-1.5 text-right">
                           You
                         </div>
-                        <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md shadow-sm">
+                        <div className="bg-primary text-primary-foreground px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-br-md shadow-sm">
                           <div className="markdown-content text-sm [&_*]:text-primary-foreground">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                           </div>
@@ -238,12 +238,12 @@ function ChatInterface({
       {/* Input */}
       {conversation.messages.length === 0 && (
         <div className="border-t border-border bg-card/50 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-6 py-4">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
             <div className="relative bg-card border border-border rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all">
               <textarea
                 ref={textareaRef}
-                className="w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[48px] max-h-[200px] rounded-xl"
-                placeholder="Ask your question... (Shift+Enter for new line)"
+                className="w-full resize-none bg-transparent px-3 sm:px-4 py-3 pr-12 sm:pr-14 text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[48px] max-h-[200px] rounded-xl"
+                placeholder="Ask your question..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
